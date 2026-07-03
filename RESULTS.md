@@ -49,6 +49,52 @@ Measured from the data (medians across 56 events):
 - Only the stop-entry-straddle family was tested. The failure mode points
   directly at testable variants (below), which reuse this entire pipeline.
 
+## Variant sweep (exhaustive): 23,040 additional configs
+
+Four alternative entry mechanisms — post-spike **continuation**, spike
+**fade**, **pretrend** (pre-news drift direction), delayed **breakout**
+(stops at the post-burst range) — crossed with entry delay (5–60s),
+spike-scaled brackets (TP/SL as multiples of the initial move), max-hold,
+and four filters: minimum spike size, high-impact-only, forecast-surprise
+z-score (from 6y history), and a measured-spread cap at entry.
+
+| Stress | Gate survivors | Expected from luck |
+|---|---|---|
+| 1.0× | 130 | — |
+| 1.5× | **22** | **~23** |
+| 2.0× | 6 | — |
+
+Survivor count at the recommended stress tier sits exactly at the noise
+floor. The 6 configs passing all three tiers collapse to **2 correlated
+families**, and neither is statistically distinguishable from zero:
+
+| Candidate | n | OOS-ish net | t-stat | Red flag |
+|---|---|---|---|---|
+| breakout/30s/high-impact/spread≤8 | 18 | +$159 | 1.20 | 44% of profit from one trade |
+| pretrend/60s/spike≥20/spread≤8 | 17 | +$163 | 0.72 | **72% of profit from one trade** |
+
+### The marginal effects are the real finding
+
+Averaged over all 23k configs (mean OOS net P&L):
+
+- surprise z filter: none −406 → z≥1 −142 → z≥2 **−49** (monotone)
+- spread cap 8 ticks: −291 → −107
+- entry delay: 5s −281 → 60s −107 (monotone)
+- min spike 20pts: −293 → −115
+- variant: breakout −86, pretrend −231, fade −224, cont −254
+
+Every sensible filter cuts losses by 2–8×. **None flips the sign.** The
+disciplined version of news trading on MNQ loses slowly instead of quickly.
+
+### Endpoint
+
+28,170 total configurations tested across 3 cost tiers. On 56 events the
+honest search space is exhausted — additional dimensions on this sample
+would manufacture false positives, not find edges. The next informative
+step is **more events** (6-year windows via `download_databento.py`), which
+would either resurrect the two candidate families with real sample size or
+(more likely) bury them.
+
 ## Where the data says to look next
 
 1. **Post-spike continuation** — enter 10–30s AFTER the release in the
