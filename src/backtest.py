@@ -49,3 +49,22 @@ def run_cached(windows: list[dict], params: StraddleParams,
     return [simulate_event(w['ts'], w['o'], w['h'], w['l'], w['c'],
                            w['event_ts'], w['name'], params, cm)
             for w in windows]
+
+
+def load_cached_windows(path) -> list[dict]:
+    """Load event windows from the parquet cache built by preprocess_ticks.py.
+    Returns the same structure precompute_windows produces, sorted by event."""
+    import numpy as np
+    df = pd.read_parquet(path)
+    out = []
+    for ev_ts, g in df.groupby('event_ts'):
+        g = g.sort_values('bar_epoch')
+        out.append({'ts': g['bar_epoch'].to_numpy(np.float64),
+                    'o': g['open'].to_numpy(np.float64),
+                    'h': g['high'].to_numpy(np.float64),
+                    'l': g['low'].to_numpy(np.float64),
+                    'c': g['close'].to_numpy(np.float64),
+                    'event_ts': float(ev_ts),
+                    'name': g['event_name'].iloc[0]})
+    out.sort(key=lambda w: w['event_ts'])
+    return out

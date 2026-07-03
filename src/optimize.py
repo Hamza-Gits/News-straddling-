@@ -116,14 +116,12 @@ def _fold_bounds(n_events: int, n_folds: int) -> list[tuple[int, int]]:
     return bounds
 
 
-def grid_search(bars, news, grid: Grid, cm: CostModel, n_folds: int = 4,
-                min_oos_trades: int = 30, progress=None,
+def grid_search(windows: list[dict], grid: Grid, cm: CostModel,
+                n_folds: int = 4, min_oos_trades: int = 30, progress=None,
                 n_workers: int | None = None) -> dict:
-    news = news.sort_values('ts_utc').reset_index(drop=True)
+    """windows: precomputed event windows (precompute_windows or
+    load_cached_windows), assumed chronologically sorted."""
     configs = grid.configs()
-    pad = 60.0
-    windows = precompute_windows(bars, news, grid.max_before() + pad,
-                                 grid.max_after() + pad)
     n_ev = len(windows)
     bounds = _fold_bounds(n_ev, n_folds)
     oos_mask = np.zeros(n_ev, dtype=bool)

@@ -1,6 +1,6 @@
 # ---- Data ----
 data:
-  ticks_dir: data/ticks          # drop MNQ tick / 1s files here (csv, csv.gz, parquet)
+  ticks_dir: MNQ 1 tick last 6 years   # NinjaTrader tick exports (.txt)
   news_dir: ff_scraper           # forexfactory_news.csv lives here (datetime_utc = UTC)
   data_tz: UTC                   # timezone of tick timestamps (if not epoch/tz-aware)
   news_tz: US/Eastern            # only used if a news file LACKS datetime_utc

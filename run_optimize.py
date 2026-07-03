@@ -16,7 +16,20 @@ import yaml
 
 from src.costs import CostModel
 from src.optimize import Grid, grid_search
+from src.backtest import load_cached_windows, precompute_windows
 from run_backtest import load_all
+
+CACHE = Path('data/event_windows.parquet')
+
+
+def get_windows(cfg, before, after):
+    if CACHE.exists():
+        print(f'Loading cached event windows: {CACHE}')
+        return load_cached_windows(CACHE)
+    print('No cache found - loading raw data (run preprocess_ticks.py to '
+          'build the cache for large tick files).')
+    bars, news = load_all(cfg)
+    return precompute_windows(bars, news.sort_values('ts_utc'), before, after)
 
 
 def main():
@@ -27,7 +40,6 @@ def main():
     args = ap.parse_args()
     cfg = yaml.safe_load(Path(args.config).read_text())
 
-    bars, news = load_all(cfg)
     costs = dict(cfg['costs'])
     if args.stress is not None:
         costs['stress_multiplier'] = args.stress
@@ -42,6 +54,9 @@ def main():
                 max_hold_secs=tuple(g['max_hold_secs']),
                 oco=tuple(g['oco']))
 
+    windows = get_windows(cfg, grid.max_before() + 60, grid.max_after() + 60)
+    print(f'{len(windows)} event windows loaded.')
+
     t0 = time.time()
 
     def progress(i, n):
@@ -49,7 +64,7 @@ def main():
         eta = el / max(i, 1) * (n - i)
         print(f'  config {i}/{n}  elapsed {el:,.0f}s  eta {eta:,.0f}s', flush=True)
 
-    res = grid_search(bars, news, grid, cm,
+    res = grid_search(windows, grid, cm,
                       n_folds=cfg['optimize']['n_folds'],
                       min_oos_trades=cfg['optimize']['min_oos_trades'],
                       progress=progress)

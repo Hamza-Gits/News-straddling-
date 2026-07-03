@@ -50,11 +50,19 @@ def main():
     args = ap.parse_args()
     cfg = yaml.safe_load(Path(args.config).read_text())
 
-    bars, news = load_all(cfg)
     cm = CostModel(**cfg['costs'])
     p = StraddleParams(**cfg['strategy'])
 
-    trades = run_backtest(bars, news, p, cm)
+    cache = Path('data/event_windows.parquet')
+    if cache.exists():
+        from src.backtest import load_cached_windows, run_cached
+        print(f'Loading cached event windows: {cache}')
+        windows = load_cached_windows(cache)
+        print(f'{len(windows)} event windows.')
+        trades = run_cached(windows, p, cm)
+    else:
+        bars, news = load_all(cfg)
+        trades = run_backtest(bars, news, p, cm)
     stats = summarize(trades)
 
     out = Path('results')
