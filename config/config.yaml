@@ -1,0 +1,44 @@
+# ---- Data ----
+data:
+  ticks_dir: data/ticks          # drop MNQ tick / 1s files here (csv, csv.gz, parquet)
+  news_dir: ff_scraper           # forexfactory_news.csv lives here (datetime_utc = UTC)
+  data_tz: UTC                   # timezone of tick timestamps (if not epoch/tz-aware)
+  news_tz: US/Eastern            # only used if a news file LACKS datetime_utc
+  currencies: [USD]              # which news currencies to trade (JPY/CNY excluded for MNQ)
+  impacts: [high, medium]
+  include_speeches: false        # Powell speeches etc. have no exact-second data drop
+
+# ---- Cost model (pessimistic by design) ----
+costs:
+  base_spread_ticks: 1.0
+  news_spread_mult: 4.0
+  news_spread_secs: 10.0
+  base_slip_ticks: 1.0
+  vol_slip_coeff: 0.25
+  stress_multiplier: 1.5         # re-run at 1.0 and 2.0 for the stress band
+  commission_per_side: 0.62
+  exchange_fees_per_side: 0.37
+
+# ---- Baseline strategy params (used by run_backtest.py) ----
+strategy:
+  stop_dist_ticks: 40            # 10 pts each side of price
+  tp_ticks: 80                   # 20 pts
+  sl_ticks: 40                   # 10 pts
+  arm_secs: 30
+  cancel_secs: 60
+  max_hold_secs: 300
+  oco: true
+  contracts: 1
+
+# ---- Optimization ----
+optimize:
+  n_folds: 4
+  min_oos_trades: 30
+  grid:
+    stop_dist_ticks: [20, 30, 40, 60, 80]
+    tp_ticks: [40, 60, 80, 120, 160]
+    sl_ticks: [20, 30, 40, 60]
+    arm_secs: [10, 30, 60]
+    cancel_secs: [30, 60, 120]
+    max_hold_secs: [120, 300, 600]
+    oco: [true, false]

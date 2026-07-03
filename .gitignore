@@ -1,0 +1,18 @@
+# price data: large + licensed, never commit
+data/ticks/
+*.parquet
+*.pq
+
+# outputs
+results/*.csv
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# scraper runtime files
+ff_scraper/scrape.log
+ff_scraper/*.progress.json
+
+# raw tick data downloads (licensed, GB-scale)
+MNQ*/
