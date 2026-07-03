@@ -9,9 +9,13 @@ data:
   include_speeches: false        # Powell speeches etc. have no exact-second data drop
 
 # ---- Cost model (pessimistic by design) ----
+# NOTE: when the parquet cache has measured bid/ask spreads, fills use those
+# directly; the modeled spread below only covers data without bid/ask.
+# Calibration from MNQ 03-26 ticks: normal median 4 ticks (max-per-second),
+# news 0-10s median 9 / p90 43 / p99 134 ticks.
 costs:
-  base_spread_ticks: 1.0
-  news_spread_mult: 4.0
+  base_spread_ticks: 2.0
+  news_spread_mult: 8.0
   news_spread_secs: 10.0
   base_slip_ticks: 1.0
   vol_slip_coeff: 0.25

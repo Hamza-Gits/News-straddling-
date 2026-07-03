@@ -149,7 +149,8 @@ def build_cache(cfg, offset_h: float, out_path: Path):
     news = load_news_cfg(cfg)
     ev_naive = (news['ts_utc'].dt.tz_localize(None)
                 + pd.Timedelta(hours=offset_h)).values
-    ev_utc_epoch = news['ts_utc'].astype('int64').values / 1e9
+    # .dt.as_unit('ns') pins the epoch unit (pandas 3.x default is us)
+    ev_utc_epoch = news['ts_utc'].dt.as_unit('ns').astype('int64').values / 1e9
     names = news['event'].values
 
     starts = ev_naive - np.timedelta64(int(BEFORE_SECS), 's')
@@ -178,7 +179,9 @@ def build_cache(cfg, offset_h: float, out_path: Path):
         raw = pd.concat(kept)
         parts = []
         for k, g in raw.groupby('ev'):
-            g = g[~g.index.duplicated(keep='last')].sort_index()
+            # keep ALL ticks within each second (stable sort preserves the
+            # file's intra-second trade order for correct open/close)
+            g = g.sort_index(kind='stable')
             sec = pd.DataFrame({
                 'open': g['last'].resample('1s').first(),
                 'high': g['last'].resample('1s').max(),

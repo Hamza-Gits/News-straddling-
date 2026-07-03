@@ -1,0 +1,14 @@
+{
+  "n_events": 56,
+  "n_trades": 47,
+  "fill_rate": 0.8392857142857143,
+  "net_pnl": -2018.81,
+  "profit_factor": 0.05347723958797301,
+  "expectancy": -42.95340425531915,
+  "win_rate": 0.06382978723404255,
+  "avg_win": 38.02,
+  "avg_loss": -48.47431818181818,
+  "max_drawdown": 2009.1000000000006,
+  "whipsaw_rate": 0.0,
+  "sharpe_per_trade": -1.295883890510612
+}

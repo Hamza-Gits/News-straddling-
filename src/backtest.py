@@ -27,6 +27,7 @@ def run_backtest(bars: pd.DataFrame, news: pd.DataFrame,
 
 def precompute_windows(bars: pd.DataFrame, news: pd.DataFrame,
                        before_secs: float, after_secs: float) -> list[dict]:
+    # NOTE: raw-bars path has no measured spread; cached path (parquet) does.
     """Slice every event's 1s window ONCE (pandas .loc is the hot cost when a
     grid search re-visits the same events thousands of times).
 
@@ -47,7 +48,8 @@ def run_cached(windows: list[dict], params: StraddleParams,
                cm: CostModel) -> list[TradeResult]:
     """Run one config across precomputed event windows."""
     return [simulate_event(w['ts'], w['o'], w['h'], w['l'], w['c'],
-                           w['event_ts'], w['name'], params, cm)
+                           w['event_ts'], w['name'], params, cm,
+                           sp=w.get('sp'))
             for w in windows]
 
 
@@ -64,6 +66,8 @@ def load_cached_windows(path) -> list[dict]:
                     'h': g['high'].to_numpy(np.float64),
                     'l': g['low'].to_numpy(np.float64),
                     'c': g['close'].to_numpy(np.float64),
+                    'sp': (g['spread_ticks'].to_numpy(np.float64)
+                           if 'spread_ticks' in g else None),
                     'event_ts': float(ev_ts),
                     'name': g['event_name'].iloc[0]})
     out.sort(key=lambda w: w['event_ts'])

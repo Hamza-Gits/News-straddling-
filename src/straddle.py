@@ -56,6 +56,10 @@ class TradeResult:
     exit_slip_ticks: float
 
 
+def _sp_at(sp, i):
+    return float(sp[i]) if sp is not None else None
+
+
 def _local_range_ticks(high: np.ndarray, low: np.ndarray, i: int, window: int = 3) -> float:
     """Range of the surrounding few 1s bars, in ticks - proxy for tape speed."""
     lo = max(0, i - window)
@@ -65,7 +69,8 @@ def _local_range_ticks(high: np.ndarray, low: np.ndarray, i: int, window: int = 
 
 def simulate_event(ts: np.ndarray, o: np.ndarray, h: np.ndarray, l: np.ndarray,
                    c: np.ndarray, event_ts: float, event_name: str,
-                   p: StraddleParams, cm: CostModel) -> TradeResult:
+                   p: StraddleParams, cm: CostModel,
+                   sp: np.ndarray | None = None) -> TradeResult:
     """Run one event. Arrays are the 1s series covering [event - arm, event + hold]."""
     no_trade = TradeResult(event_ts, event_name, 0, None, None, 'no_fill',
                            0.0, 0.0, False, 0.0, 0.0)
@@ -108,16 +113,19 @@ def simulate_event(ts: np.ndarray, o: np.ndarray, h: np.ndarray, l: np.ndarray,
                 else:
                     take_buy = hit_buy
                 lr = _local_range_ticks(h, l, i)
-                slip = cm.stop_fill_slippage_ticks(lr, secs_since)
+                slip = cm.stop_fill_slippage_ticks(lr, secs_since, _sp_at(sp, i))
+                # gap-aware: if the bar OPENED beyond the stop (e.g. after a
+                # Velocity Logic halt), the market fill starts from the open,
+                # not the stop level
                 if take_buy:
                     side = 1
-                    entry_px = buy_stop + slip * MNQ_TICK
+                    entry_px = max(buy_stop, o[i]) + slip * MNQ_TICK
                     buy_live = False
                     if p.oco:
                         sell_live = False
                 else:
                     side = -1
-                    entry_px = sell_stop - slip * MNQ_TICK
+                    entry_px = min(sell_stop, o[i]) - slip * MNQ_TICK
                     sell_live = False
                     if p.oco:
                         buy_live = False
@@ -145,8 +153,11 @@ def simulate_event(ts: np.ndarray, o: np.ndarray, h: np.ndarray, l: np.ndarray,
 
             # pessimistic ordering: SL/whipsaw before TP within the same bar
             if hit_sl or hit_opp:
-                slip = cm.stop_fill_slippage_ticks(lr, secs_since)
+                slip = cm.stop_fill_slippage_ticks(lr, secs_since, _sp_at(sp, i))
                 stop_ref = sl_px if hit_sl else (sell_stop if side == 1 else buy_stop)
+                # gap-aware: bar opening beyond the stop fills from the open
+                if i != entry_bar:
+                    stop_ref = min(stop_ref, o[i]) if side == 1 else max(stop_ref, o[i])
                 exit_px = stop_ref - side * slip * MNQ_TICK
                 reason = 'sl' if hit_sl else 'whipsaw'
                 return _finish(event_ts, event_name, side, entry_px, exit_px,
@@ -155,7 +166,7 @@ def simulate_event(ts: np.ndarray, o: np.ndarray, h: np.ndarray, l: np.ndarray,
                 return _finish(event_ts, event_name, side, entry_px, tp_px,
                                'tp', entry_slip, 0.0, whipsaw, p, cm)
             if t >= hard_exit_ts:
-                slip = cm.stop_fill_slippage_ticks(lr, secs_since)
+                slip = cm.stop_fill_slippage_ticks(lr, secs_since, _sp_at(sp, i))
                 exit_px = c[i] - side * (slip * MNQ_TICK)
                 return _finish(event_ts, event_name, side, entry_px, exit_px,
                                'time', entry_slip, slip, whipsaw, p, cm)

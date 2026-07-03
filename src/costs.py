@@ -50,12 +50,18 @@ class CostModel:
         return self.base_spread_ticks
 
     def stop_fill_slippage_ticks(self, local_range_ticks: float,
-                                 secs_since_news: float | None) -> float:
-        """Adverse slippage in ticks for a stop order that just triggered."""
+                                 secs_since_news: float | None,
+                                 measured_spread_ticks: float | None = None) -> float:
+        """Adverse slippage in ticks for a stop order that just triggered.
+        If a MEASURED spread is available (from bid/ask tick data) it replaces
+        the modeled spread - reality beats assumptions."""
         slip = self.base_slip_ticks + self.vol_slip_coeff * max(0.0, local_range_ticks)
         slip *= self.stress_multiplier
         # half the effective spread is also paid crossing the book
-        slip += 0.5 * self.spread_ticks(secs_since_news)
+        if measured_spread_ticks is not None and measured_spread_ticks == measured_spread_ticks:
+            slip += 0.5 * max(measured_spread_ticks, self.base_spread_ticks)
+        else:
+            slip += 0.5 * self.spread_ticks(secs_since_news)
         return min(slip, self.max_slip_ticks)
 
     def round_trip_commission(self) -> float:
